@@ -1,0 +1,80 @@
+{
+  "name": "astro-template",
+  "type": "module",
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.14.0",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "check": "astro check",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "verify": "pnpm run test && pnpm run check && pnpm run lint && pnpm run format:check && pnpm run build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "new:post": "node scripts/new-content.mjs post",
+    "new:project": "node scripts/new-content.mjs project",
+    "sync:contributions": "node scripts/sync-contributions.mjs",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "^4.3.8",
+    "@astrojs/rss": "^4.0.12",
+    "@astrojs/sitemap": "^3.1.2",
+    "@astrojs/tailwind": "^6.0.0",
+    "@expressive-code/plugin-collapsible-sections": "^0.44.3",
+    "@expressive-code/plugin-line-numbers": "^0.44.3",
+    "@supabase/supabase-js": "^2.90.1",
+    "astro": "^5.13.8",
+    "astro-expressive-code": "^0.44.3",
+    "astro-robots-txt": "^1.0.0",
+    "astro-seo": "^0.8.4",
+    "fuse.js": "^7.1.0",
+    "katex": "^0.16.47",
+    "mermaid": "^12.2.0",
+    "playwright": "^1.64.1",
+    "rehype-github-alert": "^1.0.0",
+    "rehype-katex": "^7.0.1",
+    "rehype-mermaid": "^3.0.0",
+    "rehype-raw": "^7.0.0",
+    "rehype-sanitize": "^6.0.0",
+    "rehype-stringify": "^10.0.1",
+    "remark-gfm": "^4.0.0",
+    "remark-math": "^6.0.0",
+    "remark-parse": "^11.0.0",
+    "remark-rehype": "^11.1.2",
+    "unified": "^11.0.5"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.9",
+    "@eslint/js": "^10.0.1",
+    "@tailwindcss/typography": "^0.5.19",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^10.4.0",
+    "eslint-plugin-astro": "^1.7.0",
+    "lint-staged": "^17.0.5",
+    "postcss": "^8.4.49",
+    "prettier": "^3.8.3",
+    "prettier-plugin-astro": "^0.14.1",
+    "tailwindcss": "^3.4.15",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.60.0"
+  },
+  "lint-staged": {
+    "*.{astro,js,ts,mjs}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{md,mdx,json,css}": [
+      "prettier --write"
+    ]
+  },
+  "pnpm": {
+    "overrides": {
+      "rehype-mermaid>@types/hast": "3.0.4"
+    }
+  },
+  "private": true,
+  "description": "An Astro portfolio, blog, and printable resume starter."
+}

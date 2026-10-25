@@ -1,0 +1,34 @@
+# build output
+dist/
+
+# Generated starter; it may have its own independent Git repository.
+/template/
+
+# generated types
+.astro/
+
+# local browser automation artifacts
+.playwright/
+.playwright-mcp/
+
+# dependencies
+node_modules/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# environment variables
+.env
+.env.production
+
+# macOS-specific files
+.DS_Store
+
+# jetbrains setting folder
+.idea/
+
+# Sites deployment checkout
+.sites-deploy/

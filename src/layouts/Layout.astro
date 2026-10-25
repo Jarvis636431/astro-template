@@ -1,0 +1,118 @@
+---
+import { SEO } from "astro-seo";
+import "katex/dist/katex.min.css";
+import "@styles/tokens.css";
+import "@styles/global.css";
+import "@styles/prose.css";
+import Search from "@components/site/Search.astro";
+import Header, { type NavLink } from "@components/site/Header.astro";
+import Footer from "@components/site/Footer.astro";
+
+import { siteConfig } from "@config/site.mjs";
+import { getPageSeo, type SeoConfig } from "@lib/seo";
+
+interface LayoutProps {
+  title?: string;
+  description?: string;
+  lang?: string;
+  navLinks?: NavLink[];
+  viewCounterSlug?: string;
+  decorativeBackground?: boolean;
+  seo?: SeoConfig;
+}
+
+const {
+  title = siteConfig.title,
+  description = siteConfig.description,
+  lang = siteConfig.language,
+  navLinks = siteConfig.navLinks,
+  viewCounterSlug,
+  decorativeBackground = true,
+  seo,
+} = Astro.props as LayoutProps;
+
+const { canonical, openGraph, twitter } = getPageSeo({
+  pathname: Astro.url.pathname,
+  siteUrl: Astro.site?.origin ?? siteConfig.url,
+  title,
+  description,
+  seo,
+});
+
+const structuredData = seo?.structuredData;
+---
+
+<!doctype html>
+<html lang={lang} class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#030712" />
+    <link
+      rel="icon"
+      type={siteConfig.favicon.type}
+      href={siteConfig.favicon.src}
+    />
+    <meta name="generator" content={Astro.generator} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+    />
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title={`${siteConfig.name} – Writing`}
+      href="/rss.xml"
+    />
+    <SEO
+      title={title}
+      description={description}
+      canonical={canonical ?? undefined}
+      noindex={seo?.noindex}
+      openGraph={openGraph}
+      twitter={twitter}
+    />
+    {
+      structuredData && (
+        <script
+          is:inline
+          type="application/ld+json"
+          set:html={JSON.stringify(structuredData)}
+        />
+      )
+    }
+  </head>
+  <body
+    class="relative min-h-screen overflow-x-hidden bg-background text-primary selection:bg-accent-cyan/20 selection:text-primary"
+  >
+    {
+      decorativeBackground && (
+        <div class="site-background fixed inset-0 -z-10" />
+      )
+    }
+    <a
+      class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 z-50 px-4 py-2 bg-surface text-primary rounded-md border border-border"
+      href="#main">Skip to content</a
+    >
+
+    <Header navLinks={navLinks} />
+
+    <script>
+      import { renderMermaid } from "@scripts/mermaid";
+
+      void renderMermaid();
+    </script>
+
+    <main
+      id="main"
+      class="min-w-0 flex-1 px-4 md:px-8 max-w-6xl mx-auto w-full"
+    >
+      <slot />
+    </main>
+
+    <Footer viewCounterSlug={viewCounterSlug} />
+    <Search />
+  </body>
+</html>

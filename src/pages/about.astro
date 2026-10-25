@@ -1,0 +1,220 @@
+---
+import { siteConfig } from "@config/site.mjs";
+import Layout from "@layouts/Layout.astro";
+import Contributions from "@components/contributions/Contributions.astro";
+import { profile } from "@config/profile.mjs";
+import { integrationConfig } from "@config/integrations.mjs";
+import {
+  contributionProjects,
+  mergedPullRequestCount,
+} from "@lib/contributions";
+
+const description = profile.about.description;
+const experiences = profile.experiences;
+
+const pageUrl = new URL("/about", Astro.site ?? siteConfig.url).toString();
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "ProfilePage",
+  url: pageUrl,
+  inLanguage: "en",
+  mainEntity: {
+    "@type": "Person",
+    name: profile.name,
+    description,
+    jobTitle: profile.role,
+    email: profile.email ? `mailto:${profile.email}` : undefined,
+    worksFor: profile.organization
+      ? { "@type": "Organization", name: profile.organization }
+      : undefined,
+    alumniOf: profile.education.institution
+      ? {
+          "@type": "CollegeOrUniversity",
+          name: profile.education.institution,
+        }
+      : undefined,
+    sameAs: siteConfig.github.url ? [siteConfig.github.url] : [],
+  },
+};
+---
+
+<Layout
+  title={`About - ${siteConfig.name}`}
+  lang="en"
+  description={description}
+  seo={{ canonical: pageUrl, type: "profile", structuredData }}
+>
+  <article class="about-page">
+    <header class="about-intro">
+      <h1>I'm {profile.name}.</h1>
+      <p class="about-lead">{profile.about.lead}</p>
+      {profile.about.paragraphs.map((paragraph) => <p>{paragraph}</p>)}
+      <nav class="about-links" aria-label="Profile and contact links">
+        <a href="/resume">View resume</a>
+        {
+          siteConfig.github.url && (
+            <a
+              href={siteConfig.github.url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              GitHub
+            </a>
+          )
+        }
+        {profile.email && <a href={`mailto:${profile.email}`}>Get in touch</a>}
+      </nav>
+    </header>
+
+    {
+      experiences.length > 0 && (
+        <section class="about-section" aria-labelledby="experience-title">
+          <h2 id="experience-title">Experience</h2>
+          <dl class="experience-list">
+            {experiences.map((experience) => (
+              <div>
+                <dt>{experience.period}</dt>
+                <dd>
+                  <h3>{experience.organization}</h3>
+                  <p>{experience.role}</p>
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      )
+    }
+
+    {
+      integrationConfig.contributions.enabled && siteConfig.github.username && (
+        <section
+          id="open-source"
+          class="about-section"
+          aria-labelledby="contributions-title"
+        >
+          <div class="contributions-heading">
+            <h2 id="contributions-title">Open-source contributions</h2>
+            <a class="all-contributions" href="/contributions">
+              View all contributions
+            </a>
+          </div>
+          <p class="contribution-summary">
+            {mergedPullRequestCount} merged PRs across{" "}
+            {contributionProjects.length} repositories
+          </p>
+          <Contributions compact />
+        </section>
+      )
+    }
+  </article>
+</Layout>
+
+<style>
+  .about-page {
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: clamp(3rem, 8vw, 6rem) 0;
+  }
+  .about-intro h1 {
+    margin: 0 0 1.5rem;
+    font-size: clamp(2.8rem, 7vw, 4.5rem);
+    font-weight: 600;
+    line-height: 1.15;
+  }
+  .about-intro p {
+    max-width: 38rem;
+    margin: 0.75rem 0;
+    color: #666;
+    font-size: 1rem;
+    line-height: 1.85;
+  }
+  .about-intro .about-lead {
+    color: var(--color-primary);
+    font-size: 1.2rem;
+  }
+  .about-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-top: 1.75rem;
+  }
+  .about-links a {
+    color: var(--color-accent);
+    font-size: 0.9rem;
+    text-underline-offset: 0.3em;
+  }
+  .about-section {
+    margin-top: 3rem;
+    padding-top: 1.75rem;
+    border-top: 1px solid rgb(var(--color-primary-rgb) / 0.12);
+  }
+  .about-section h2 {
+    margin: 0 0 1.5rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+  .experience-list {
+    display: grid;
+    gap: 1.4rem;
+    margin: 0;
+  }
+  .experience-list > div {
+    display: grid;
+    grid-template-columns: 8rem minmax(0, 1fr);
+    gap: 1rem;
+  }
+  .experience-list dt {
+    color: #666;
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+  .experience-list dd {
+    margin: 0;
+  }
+  .experience-list h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 500;
+  }
+  .experience-list p {
+    margin: 0.3rem 0 0;
+    color: #666;
+    font-size: 0.85rem;
+  }
+  .contribution-summary {
+    margin: -0.5rem 0 1.5rem;
+    color: #666;
+    font-size: 0.8rem;
+    line-height: 1.6;
+  }
+  .contributions-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .contributions-heading h2 {
+    margin: 0;
+  }
+  .all-contributions {
+    color: var(--color-accent);
+    font-size: 0.85rem;
+    text-underline-offset: 0.25em;
+  }
+  a:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.3em;
+  }
+  a:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 5px;
+  }
+  @media (max-width: 480px) {
+    .experience-list > div {
+      grid-template-columns: 1fr;
+      gap: 0.3rem;
+    }
+  }
+</style>

@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    background-color: var(--color-background);
+    scroll-behavior: smooth;
+    scroll-padding-top: 80px;
+  }
+
+  body {
+    @apply bg-background text-primary font-body antialiased selection:bg-accent-cyan/20 selection:text-primary;
+  }
+
+  a,
+  button,
+  [role="button"] {
+    cursor: pointer;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-display text-primary tracking-tight;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+}
+
+.site-background {
+  background:
+    radial-gradient(
+      circle at top left,
+      rgb(var(--color-accent-rgb) / 0.12),
+      transparent 55%
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgb(var(--color-accent-secondary-rgb) / 0.12),
+      transparent 50%
+    );
+}

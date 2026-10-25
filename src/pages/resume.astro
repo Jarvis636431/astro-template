@@ -1,0 +1,495 @@
+---
+import { siteConfig } from "@config/site.mjs";
+import Layout from "@layouts/Layout.astro";
+import { profile } from "@config/profile.mjs";
+import { getResumeContent } from "@lib/content/resume";
+
+const { projects, openSource, mergedPullRequestCount } =
+  await getResumeContent();
+const siteOrigin = Astro.site?.origin ?? siteConfig.url;
+const canonicalUrl = new URL(Astro.url.pathname, siteOrigin).toString();
+const websiteLabel = new URL(siteConfig.url).hostname;
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "ProfilePage",
+  name: `${profile.name} Resume`,
+  url: canonicalUrl,
+  inLanguage: "en",
+  mainEntity: {
+    "@type": "Person",
+    name: profile.name,
+    jobTitle: profile.experiences[0]?.role,
+    email: profile.email ? `mailto:${profile.email}` : undefined,
+    url: siteConfig.url,
+    worksFor: profile.organization
+      ? { "@type": "Organization", name: profile.organization }
+      : undefined,
+    alumniOf: profile.education.institution
+      ? {
+          "@type": "CollegeOrUniversity",
+          name: profile.education.institution,
+        }
+      : undefined,
+    knowsAbout: profile.skills.flatMap((group) => group.items),
+    sameAs: siteConfig.github.url ? [siteConfig.github.url] : [],
+  },
+};
+---
+
+<Layout
+  title={`Resume - ${profile.name}`}
+  lang="en"
+  description={profile.summary}
+  decorativeBackground={false}
+  seo={{
+    canonical: canonicalUrl,
+    type: "profile",
+    image: siteConfig.image,
+    structuredData,
+  }}
+>
+  <article class="resume" aria-labelledby="resume-title">
+    <header class="resume-header">
+      <h1 id="resume-title">{profile.name}</h1>
+      <p class="headline">{profile.title}</p>
+      <address class="contact-list">
+        <span>{profile.location}</span>
+        {
+          profile.email && (
+            <a href={`mailto:${profile.email}`}>{profile.email}</a>
+          )
+        }
+        <a href={siteConfig.url}>{websiteLabel}</a>
+        {
+          siteConfig.github.url && (
+            <a
+              href={siteConfig.github.url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              GitHub ↗
+            </a>
+          )
+        }
+      </address>
+    </header>
+
+    <section class="resume-section" aria-labelledby="profile-heading">
+      <h2 id="profile-heading">Profile</h2>
+      <p>{profile.summary}</p>
+    </section>
+
+    {
+      profile.experiences.length > 0 && (
+        <section class="resume-section" aria-labelledby="experience-heading">
+          <h2 id="experience-heading">Experience</h2>
+          <div class="entry-list">
+            {profile.experiences.map((experience) => (
+              <article class="resume-entry">
+                <div class="entry-heading">
+                  <h3>{experience.organization}</h3>
+                  <span class="entry-period">{experience.period}</span>
+                </div>
+                <p class="entry-role">
+                  {experience.role}
+                  {experience.location && <span> · {experience.location}</span>}
+                </p>
+                <p>{experience.summary}</p>
+                <ul class="highlights">
+                  {experience.highlights.map((highlight) => (
+                    <li>{highlight}</li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
+        </section>
+      )
+    }
+
+    {
+      projects.length > 0 && (
+        <section class="resume-section" aria-labelledby="projects-heading">
+          <h2 id="projects-heading">Selected projects</h2>
+          <div class="entry-list">
+            {projects.map((project) => (
+              <article class="resume-entry">
+                <div class="entry-heading">
+                  <h3>
+                    <a href={project.href}>{project.name}</a>
+                  </h3>
+                </div>
+                <p>{project.description}</p>
+                <p class="entry-stack">{project.stack.join(" · ")}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      )
+    }
+
+    {
+      profile.education.institution && (
+        <section class="resume-section" aria-labelledby="education-heading">
+          <h2 id="education-heading">Education</h2>
+          <div class="resume-entry">
+            <h3>{profile.education.institution}</h3>
+            <p>{profile.education.description}</p>
+          </div>
+        </section>
+      )
+    }
+
+    {
+      profile.skills.length > 0 && (
+        <section class="resume-section" aria-labelledby="skills-heading">
+          <h2 id="skills-heading">Skills</h2>
+          <dl class="skill-groups">
+            {profile.skills.map((group) => (
+              <div>
+                <dt>{group.label}</dt>
+                <dd>{group.items.join(" · ")}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      )
+    }
+
+    {
+      openSource.length > 0 && (
+        <section class="resume-section" aria-labelledby="opensource-heading">
+          <h2 id="opensource-heading">Open source</h2>
+          <p class="contribution-summary">
+            {mergedPullRequestCount} merged pull requests across{" "}
+            {openSource.length} repositories.
+          </p>
+          <div class="entry-list contribution-list">
+            {openSource.map((project) => (
+              <article class="resume-entry">
+                <div class="entry-heading">
+                  <h3>
+                    <a
+                      href={project.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {project.name}
+                    </a>
+                    <span class="repository-owner">
+                      {project.repository.split("/")[0]}
+                    </span>
+                  </h3>
+                  <span class="entry-period">
+                    {project.count} merged {project.count === 1 ? "PR" : "PRs"}
+                  </span>
+                </div>
+                <p>
+                  <a
+                    class="pr-link"
+                    href={project.latest.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {project.latest.title}
+                    <span class="pr-number"> #{project.latest.number}</span>
+                  </a>
+                </p>
+              </article>
+            ))}
+          </div>
+          <a class="archive-link" href="/contributions">
+            Full contribution archive →
+          </a>
+        </section>
+      )
+    }
+
+    <div class="resume-actions" data-print-hidden>
+      <button id="print-resume" type="button">
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          aria-hidden="true"
+        >
+          <path
+            d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"
+          ></path>
+          <path d="M6 14h12v7H6zM18 12h.01"></path>
+        </svg>
+        Print / Save PDF
+      </button>
+    </div>
+  </article>
+</Layout>
+
+<script>
+  document
+    .getElementById("print-resume")
+    ?.addEventListener("click", () => window.print());
+</script>
+
+<style>
+  .resume {
+    max-width: 54rem;
+    margin: 3rem auto;
+    padding: 3rem 3.5rem 2rem;
+    background: var(--color-surface);
+    color: #292929;
+    font-family: var(--font-display);
+    font-size: 0.875rem;
+    line-height: 1.65;
+    overflow-wrap: anywhere;
+  }
+  .resume-header {
+    text-align: center;
+    padding-bottom: 0.5rem;
+  }
+  h1 {
+    margin: 0;
+    font-size: 2.5rem;
+    font-weight: 600;
+    line-height: 1.15;
+  }
+  .headline {
+    margin-top: 0.6rem;
+    color: #555;
+    font-size: 1rem;
+  }
+  .contact-list {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    margin-top: 1rem;
+    color: #606060;
+    font-size: 0.75rem;
+    font-style: normal;
+  }
+  a {
+    color: inherit;
+    text-decoration: none;
+    text-underline-offset: 0.2em;
+  }
+  a:hover {
+    color: var(--color-accent);
+    text-decoration: underline;
+  }
+  a:focus-visible,
+  button:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 4px;
+  }
+  .resume-section {
+    margin-top: 1.65rem;
+  }
+  h2 {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin: 0 0 0.8rem;
+    color: var(--color-accent);
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.3;
+    break-after: avoid;
+  }
+  h2::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: rgb(var(--color-accent-rgb) / 0.25098);
+  }
+  h3 {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+  p {
+    margin: 0.3rem 0 0;
+  }
+  .entry-list {
+    display: grid;
+    gap: 1rem;
+  }
+  .entry-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.3rem 1rem;
+  }
+  .entry-period {
+    flex-shrink: 0;
+    color: #666;
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .entry-role {
+    margin-top: 0.05rem;
+    color: #555;
+    font-style: italic;
+  }
+  .highlights {
+    margin: 0.35rem 0 0;
+    padding-left: 1.15rem;
+    list-style: disc;
+  }
+  .highlights li + li {
+    margin-top: 0.2rem;
+  }
+  .entry-stack,
+  .repository-owner,
+  .pr-number {
+    color: #737373;
+    font-size: 0.75rem;
+  }
+  .skill-groups {
+    display: grid;
+    gap: 0.35rem;
+    margin: 0;
+  }
+  .skill-groups > div {
+    display: grid;
+    grid-template-columns: 9.5rem minmax(0, 1fr);
+    gap: 1rem;
+  }
+  .skill-groups dt {
+    font-weight: 600;
+  }
+  .skill-groups dd {
+    margin: 0;
+  }
+  .contribution-summary {
+    margin-bottom: 0.75rem;
+  }
+  .contribution-list {
+    gap: 0.65rem;
+  }
+  .repository-owner {
+    margin-left: 0.6rem;
+    font-weight: 400;
+  }
+  .pr-link {
+    color: #555;
+  }
+  .archive-link {
+    display: inline-block;
+    margin-top: 0.8rem;
+    color: var(--color-accent);
+    font-size: 0.75rem;
+  }
+  .resume-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+  }
+  .resume-actions button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.8rem;
+    border: 1px solid rgb(var(--color-accent-rgb) / 0.25098);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--color-accent);
+    font: inherit;
+    font-size: 0.75rem;
+    cursor: pointer;
+  }
+  .resume-actions button:hover {
+    background: rgb(var(--color-accent-rgb) / 0.03137);
+  }
+  @media screen and (max-width: 640px) {
+    .resume {
+      margin: 1.5rem auto;
+      padding: 1.75rem 1.25rem;
+    }
+    h1 {
+      font-size: 2.1rem;
+    }
+    .contact-list {
+      gap: 0.35rem 0.75rem;
+    }
+    .entry-heading {
+      flex-wrap: wrap;
+    }
+    .skill-groups > div {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+  }
+  @page {
+    size: A4;
+    margin: 14mm 16mm;
+  }
+  @media print {
+    :global(#main-header),
+    :global(body > footer),
+    :global(#search-dialog),
+    :global(#mobile-menu),
+    :global(astro-dev-toolbar),
+    :global(body > a[href="#main"]),
+    [data-print-hidden] {
+      display: none !important;
+    }
+    :global(html),
+    :global(body) {
+      background: white !important;
+    }
+    :global(#main) {
+      max-width: none !important;
+      padding: 0 !important;
+    }
+    .resume {
+      max-width: none;
+      margin: 0;
+      padding: 0;
+      font-size: 9pt;
+      line-height: 1.45;
+    }
+    h1 {
+      font-size: 26pt;
+    }
+    .headline {
+      font-size: 11pt;
+    }
+    .contact-list {
+      margin-top: 2mm;
+      font-size: 8pt;
+    }
+    .resume-section {
+      margin-top: 5mm;
+    }
+    h2 {
+      margin-bottom: 2.5mm;
+      font-size: 11pt;
+    }
+    h3 {
+      font-size: 9.5pt;
+    }
+    .resume-entry,
+    .skill-groups > div {
+      break-inside: avoid;
+    }
+    .entry-list {
+      gap: 3mm;
+    }
+    .entry-period,
+    .entry-stack,
+    .repository-owner,
+    .pr-number,
+    .archive-link {
+      font-size: 8pt;
+    }
+    a {
+      color: inherit !important;
+    }
+  }
+</style>

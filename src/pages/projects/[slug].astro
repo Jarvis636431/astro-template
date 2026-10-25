@@ -1,0 +1,394 @@
+---
+import { siteConfig } from "@config/site.mjs";
+import Layout from "@layouts/Layout.astro";
+import Markdown from "@components/Markdown.astro";
+import type { CollectionEntry } from "astro:content";
+import { getProjects } from "@lib/content";
+
+export async function getStaticPaths() {
+  const projects = await getProjects();
+  return projects.map((project) => ({
+    params: { slug: project.slug },
+    props: { project },
+  }));
+}
+
+const { project } = Astro.props as { project: CollectionEntry<"projects"> };
+const { Content } = await project.render();
+const title = project.data.titleEn ?? project.data.title;
+const summary = project.data.summaryEn ?? project.data.summary;
+const titleLanguage = project.data.titleEn ? "en" : project.data.language;
+const summaryLanguage = project.data.summaryEn ? "en" : project.data.language;
+const publishDateIso = project.data.publishDate.toISOString();
+const updatedDateIso = project.data.updatedDate?.toISOString();
+const siteOrigin = Astro.site?.origin ?? siteConfig.url;
+const canonicalUrl = new URL(Astro.url.pathname, siteOrigin).toString();
+const projectStructuredData: Record<string, unknown> = {
+  "@context": "https://schema.org",
+  "@type": "CreativeWork",
+  name: title,
+  alternateName: [
+    ...new Set([project.data.title, ...project.data.aliases]),
+  ].filter((name) => name !== title),
+  description: summary,
+  url: canonicalUrl,
+  mainEntityOfPage: canonicalUrl,
+  datePublished: publishDateIso,
+  dateModified: updatedDateIso ?? publishDateIso,
+  inLanguage: project.data.language,
+  creator: { "@type": "Person", name: siteConfig.name },
+};
+if (project.data.coverImage) {
+  projectStructuredData.image = [
+    new URL(project.data.coverImage, siteOrigin).toString(),
+  ];
+}
+const externalLinks = [project.data.externalUrl, project.data.githubUrl].filter(
+  (url): url is string => Boolean(url),
+);
+if (externalLinks.length) projectStructuredData.sameAs = externalLinks;
+const allProjects = await getProjects({ includeArchived: false });
+const currentIndex = allProjects.findIndex(
+  (item) => item.slug === project.slug,
+);
+const prevProject =
+  currentIndex > 0 ? allProjects[currentIndex - 1] : undefined;
+const nextProject =
+  currentIndex >= 0 ? allProjects[currentIndex + 1] : undefined;
+---
+
+<Layout
+  title={`${title} - ${siteConfig.name}`}
+  lang={project.data.language}
+  description={summary}
+  decorativeBackground={false}
+  seo={{
+    canonical: canonicalUrl,
+    type: "article",
+    image: project.data.coverImage
+      ? { src: project.data.coverImage, alt: `${title} logo` }
+      : undefined,
+    publishedTime: publishDateIso,
+    modifiedTime: updatedDateIso,
+    tags: project.data.stack,
+    structuredData: projectStructuredData,
+  }}
+>
+  <article class="case-study">
+    <a class="case-back" href="/projects" lang="en"
+      ><span aria-hidden="true">←</span> Back to projects</a
+    >
+    <header
+      class:list={[
+        "case-header",
+        !project.data.coverImage && "case-header--text",
+      ]}
+    >
+      <div class="case-intro">
+        <h1 lang={titleLanguage}>{title}</h1>
+        <p class="case-summary" lang={summaryLanguage}>{summary}</p>
+        {
+          externalLinks.length > 0 && (
+            <div class="case-links" aria-label="Project links" lang="en">
+              {project.data.externalUrl && (
+                <a
+                  href={project.data.externalUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Website <span aria-hidden="true">↗</span>
+                </a>
+              )}
+              {project.data.githubUrl && (
+                <a
+                  href={project.data.githubUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`${title} on GitHub`}
+                >
+                  <svg
+                    aria-hidden="true"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.75"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
+                  </svg>
+                  <span>
+                    {new URL(project.data.githubUrl).pathname
+                      .replace(/^\/|\/$/g, "")
+                      .replace(/\.git$/, "")}
+                  </span>
+                </a>
+              )}
+            </div>
+          )
+        }
+      </div>
+      {
+        project.data.coverImage && (
+          <div class="case-logo" aria-hidden="true">
+            <img
+              src={project.data.coverImage}
+              alt=""
+              width="112"
+              height="112"
+              loading="eager"
+              decoding="async"
+            />
+          </div>
+        )
+      }
+    </header>
+
+    <section class="case-body" aria-label="Project details">
+      <div
+        class="case-article"
+        id="project-article"
+        lang={project.data.language}
+      >
+        <Markdown><Content /></Markdown>
+      </div>
+    </section>
+    {
+      (prevProject || nextProject) && (
+        <nav aria-label="Project navigation" class="case-navigation" lang="en">
+          {prevProject && (
+            <a href={`/projects/${prevProject.slug}`} rel="prev">
+              <span>← Previous project</span>
+              <strong
+                lang={
+                  prevProject.data.titleEn ? "en" : prevProject.data.language
+                }
+              >
+                {prevProject.data.titleEn ?? prevProject.data.title}
+              </strong>
+            </a>
+          )}
+          {nextProject && (
+            <a
+              href={`/projects/${nextProject.slug}`}
+              rel="next"
+              class="case-navigation__next"
+            >
+              <span>Next project →</span>
+              <strong
+                lang={
+                  nextProject.data.titleEn ? "en" : nextProject.data.language
+                }
+              >
+                {nextProject.data.titleEn ?? nextProject.data.title}
+              </strong>
+            </a>
+          )}
+        </nav>
+      )
+    }
+  </article>
+</Layout>
+
+<style>
+  .case-study {
+    max-width: 52rem;
+    margin: 0 auto;
+    padding: 2.5rem 0 2rem;
+  }
+  .case-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.75rem;
+    color: var(--color-secondary);
+    font-size: 0.8125rem;
+    text-decoration: none;
+    transition: color 180ms ease;
+  }
+  .case-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 7rem;
+    gap: 2rem;
+    align-items: start;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--color-border-strong);
+  }
+  .case-header--text {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .case-intro {
+    min-width: 0;
+  }
+  h1 {
+    margin: 0;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: -0.04em;
+    overflow-wrap: anywhere;
+  }
+  .case-summary {
+    max-width: 48ch;
+    margin: 1rem 0 0;
+    color: var(--color-secondary);
+    font-size: 1.0625rem;
+    line-height: 1.75;
+  }
+  .case-logo {
+    display: grid;
+    place-items: center;
+    width: 7rem;
+    aspect-ratio: 1;
+    padding: 1rem;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 0.625rem;
+    background: rgb(var(--color-surface-rgb) / 0.4);
+  }
+  .case-logo img {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+  }
+  .case-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.5rem;
+    margin-top: 1.25rem;
+    font-size: 0.8125rem;
+  }
+  .case-links a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    max-width: 100%;
+    color: var(--color-accent);
+    text-decoration: none;
+  }
+  .case-links svg {
+    flex: none;
+  }
+  .case-links a span {
+    overflow-wrap: anywhere;
+  }
+  .case-links a:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.25em;
+  }
+  a:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 4px;
+    border-radius: 2px;
+  }
+  .case-body {
+    margin-top: 2rem;
+  }
+  .case-article {
+    min-width: 0;
+  }
+  :global(.case-article .prose) {
+    max-width: 100%;
+    font-size: 1rem;
+  }
+  :global(.case-article .prose h2) {
+    margin-top: 2em;
+    padding: 0;
+    border: 0;
+    font-size: 1.5em;
+  }
+  :global(.case-article .prose h2:first-child) {
+    margin-top: 0;
+  }
+  :global(.case-article .prose h3) {
+    font-size: 1.1875em;
+  }
+  :global(.case-article .prose img) {
+    max-width: 100%;
+    height: auto;
+    border: 1px solid var(--color-border);
+    border-radius: 0.375rem;
+    box-shadow: none;
+  }
+  .case-navigation {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem;
+    margin-top: 2.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-border-strong);
+  }
+  .case-navigation a {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.5rem;
+    color: var(--color-primary);
+    text-decoration: none;
+    transition: color 180ms ease;
+  }
+  .case-navigation span {
+    color: var(--color-secondary);
+    font: 0.6875rem/1.5 var(--font-mono);
+  }
+  .case-navigation strong {
+    font-family: var(--font-display);
+    font-size: 1.125rem;
+    font-weight: 500;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+  .case-navigation__next {
+    grid-column: 2;
+    text-align: right;
+    align-items: flex-end;
+  }
+  .case-back:hover,
+  .case-navigation a:hover {
+    color: var(--color-accent);
+  }
+  @media (max-width: 639px) {
+    .case-study {
+      padding-top: 1.75rem;
+    }
+    .case-back {
+      margin-bottom: 1.5rem;
+    }
+    .case-header {
+      grid-template-columns: minmax(0, 1fr) 3.5rem;
+      gap: 1rem;
+      padding-bottom: 1.5rem;
+    }
+    .case-header--text {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .case-summary {
+      margin-top: 0.75rem;
+      font-size: 0.9375rem;
+    }
+    .case-logo {
+      width: 3.5rem;
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+    }
+    .case-body {
+      margin-top: 1.5rem;
+    }
+    .case-navigation {
+      gap: 1rem;
+    }
+    .case-navigation strong {
+      font-size: 1rem;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .case-back,
+    .case-navigation a {
+      transition: none;
+    }
+  }
+</style>

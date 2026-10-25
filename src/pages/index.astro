@@ -1,0 +1,505 @@
+---
+import { siteConfig } from "@config/site.mjs";
+import { profile } from "@config/profile.mjs";
+import { integrationConfig } from "@config/integrations.mjs";
+import Layout from "@layouts/Layout.astro";
+import { getRecentPosts, getFeaturedProjects } from "@lib/content";
+import { getPostReadingTime } from "@lib/content/blog";
+
+const [posts, projects] = await Promise.all([
+  getRecentPosts(3),
+  getFeaturedProjects(3),
+]);
+const showHeatmap =
+  integrationConfig.contributions.enabled &&
+  integrationConfig.contributions.heatmap &&
+  Boolean(siteConfig.github.username);
+---
+
+<Layout
+  title={`${siteConfig.name} | ${profile.role}`}
+  description={profile.home.description}
+  lang="en"
+  viewCounterSlug="home"
+  decorativeBackground={false}
+>
+  <div class="home">
+    <section
+      class:list={["intro", !showHeatmap && "intro--single"]}
+      aria-labelledby="intro-title"
+    >
+      <div class="intro-copy">
+        <h1 id="intro-title">Hi, I'm <span>{profile.name}</span>.</h1>
+        <p class="intro-description">{profile.home.introduction}</p>
+        <nav class="intro-links" aria-label="Explore my work">
+          <a href="#selected-projects">Projects ↘</a>
+          <a href="#recent-writing">Writing ↘</a>
+          <a href="/about">About →</a>
+        </nav>
+      </div>
+
+      {
+        showHeatmap && (
+          <div class="contributions" aria-labelledby="contributions-title">
+            <div class="contributions-heading">
+              <h2 id="contributions-title">Contributions</h2>
+              <a
+                href={siteConfig.github.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`Visit ${profile.name} on GitHub`}
+              >
+                GitHub ↗
+              </a>
+            </div>
+            <div
+              id="contribution-scroll"
+              class="contribution-scroll"
+              role="region"
+              aria-label="GitHub contribution heatmap; scroll horizontally to explore"
+              tabindex="0"
+            >
+              <img
+                src={`https://ghchart.rshah.org/2f6f6d/${siteConfig.github.username}`}
+                alt={`${siteConfig.github.username}’s GitHub contributions over the past year`}
+                width="722"
+                height="112"
+              />
+            </div>
+          </div>
+        )
+      }
+      <a
+        class="scroll-down"
+        href="#selected-projects"
+        aria-label="Scroll down to selected projects"
+      >
+        <span class="scroll-down-arrow" aria-hidden="true">↓</span>
+      </a>
+    </section>
+
+    <section
+      id="selected-projects"
+      class="content-section"
+      aria-labelledby="projects-title"
+      data-reveal
+    >
+      <div class="section-heading">
+        <h2 id="projects-title">Selected Projects</h2>
+        <a href="/projects">All projects →</a>
+      </div>
+      <div class="project-list">
+        {
+          projects.length === 0 && (
+            <p class="empty-state">Projects will appear here soon.</p>
+          )
+        }
+        {
+          projects.map((project, index) => (
+            <a class="project-row" href={`/projects/${project.slug}`}>
+              <span class="project-number" aria-hidden="true">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <div class="project-copy">
+                <h3>{project.data.titleEn ?? project.data.title}</h3>
+                <p>{project.data.summaryEn ?? project.data.summary}</p>
+                <span class="project-stack">
+                  {project.data.stack.join(" / ")}
+                </span>
+              </div>
+              <span class="entry-arrow" aria-hidden="true">
+                ↗
+              </span>
+            </a>
+          ))
+        }
+      </div>
+    </section>
+
+    <section
+      id="recent-writing"
+      class="content-section"
+      aria-labelledby="writing-title"
+      data-reveal
+    >
+      <div class="section-heading">
+        <h2 id="writing-title">Recent Writing</h2>
+        <a href="/blogs">All writing →</a>
+      </div>
+      <div class="writing-list">
+        {
+          posts.map((post) => (
+            <a class="writing-row" href={`/blogs/${post.slug}`}>
+              <time datetime={post.data.publishDate.toISOString()}>
+                {post.data.publishDate.toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "short",
+                  day: "2-digit",
+                  timeZone: siteConfig.timeZone,
+                })}
+              </time>
+              <div class="writing-copy">
+                <h3>{post.data.titleEn ?? post.data.title}</h3>
+                <p>{post.data.descriptionEn ?? post.data.description}</p>
+                <span class="reading-time">
+                  {getPostReadingTime(post)} min read
+                </span>
+              </div>
+              <span class="entry-arrow" aria-hidden="true">
+                →
+              </span>
+            </a>
+          ))
+        }
+        {
+          posts.length === 0 && (
+            <p class="empty-state">
+              New notes are on the way. Check back soon.
+            </p>
+          )
+        }
+      </div>
+    </section>
+  </div>
+</Layout>
+
+<style>
+  .home {
+    --home-rule: var(--color-border);
+    --home-muted: var(--color-secondary);
+    --home-accent: var(--color-accent);
+    --meta-column: 8rem;
+    --column-gap: 2rem;
+    padding-bottom: 2rem;
+    font-family: var(--font-display);
+  }
+  .intro {
+    position: relative;
+    min-height: calc(100svh - 74px);
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    align-content: center;
+    align-items: stretch;
+    column-gap: 3rem;
+    padding: 5rem 0;
+  }
+  .intro.intro--single {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .intro > * {
+    min-width: 0;
+  }
+  .intro .scroll-down {
+    position: absolute;
+    bottom: 0.75rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    width: min(100%, 16rem);
+    min-height: 64px;
+    padding: 0.5rem 0.75rem;
+    color: var(--home-muted);
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    line-height: 1.5;
+    white-space: nowrap;
+    opacity: 0;
+    transition:
+      opacity 180ms ease,
+      color 180ms ease;
+  }
+  .intro .scroll-down:hover,
+  .intro .scroll-down:focus-visible {
+    opacity: 1;
+  }
+  .scroll-down > span {
+    transform: translateY(8px) scale(0.94);
+    transition: transform 360ms cubic-bezier(0.2, 1.5, 0.4, 1);
+  }
+  .scroll-down:hover > span,
+  .scroll-down:focus-visible > span {
+    transform: translateY(0) scale(1);
+  }
+  .scroll-down-arrow {
+    font-size: 1rem;
+    transition-delay: 40ms;
+  }
+  .intro h1 {
+    font-size: clamp(2.75rem, 4.5vw, 4rem);
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: 0;
+    text-wrap: balance;
+  }
+  .intro h1 span {
+    color: var(--home-accent);
+  }
+  .intro-description {
+    margin-top: 0.75rem;
+    color: var(--home-muted);
+    font-size: 1.125rem;
+    line-height: 1.5;
+  }
+  .intro-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-top: 1.25rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+  a {
+    transition: color 180ms ease;
+  }
+  a:hover {
+    color: var(--home-accent);
+  }
+  a:focus-visible,
+  .contribution-scroll:focus-visible {
+    outline: 2px solid var(--home-accent);
+    outline-offset: 6px;
+  }
+  .contributions {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 0.5rem 0 0.125rem;
+  }
+  .contributions-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  .contributions-heading h2,
+  .contributions-heading a {
+    font-size: 0.8125rem;
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: 0;
+    color: var(--home-muted);
+  }
+  .contributions-heading a {
+    white-space: nowrap;
+  }
+  .contributions-heading a:hover {
+    color: var(--home-accent);
+  }
+  .contribution-scroll {
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-strong) transparent;
+  }
+  .contribution-scroll img {
+    display: block;
+    width: 100%;
+    min-width: 440px;
+    height: auto;
+    max-width: none;
+  }
+  .content-section {
+    padding: 3rem 0;
+    scroll-margin-top: 6rem;
+  }
+  .section-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--home-rule);
+  }
+  .section-heading h2 {
+    font-size: clamp(1.25rem, 2.5vw, 1.5rem);
+    font-weight: 500;
+    line-height: 1.4;
+    letter-spacing: 0;
+  }
+  .section-heading > a {
+    font-size: 0.8125rem;
+    color: var(--home-muted);
+    white-space: nowrap;
+  }
+  .section-heading > a:hover {
+    color: var(--home-accent);
+  }
+  .project-row,
+  .writing-row {
+    display: grid;
+    grid-template-columns: var(--meta-column) minmax(0, 1fr) 1.25rem;
+    align-items: baseline;
+    column-gap: var(--column-gap);
+    padding: 2rem 0;
+    border-bottom: 1px solid var(--home-rule);
+  }
+  .project-number,
+  time,
+  .project-stack,
+  .reading-time {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    line-height: 1.8;
+    color: var(--home-muted);
+  }
+  time {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .project-copy,
+  .writing-copy {
+    min-width: 0;
+    max-width: 44rem;
+  }
+  h3 {
+    font-size: 1.25rem;
+    font-weight: 500;
+    line-height: 1.5;
+    letter-spacing: 0;
+    text-wrap: pretty;
+    transition: color 180ms ease;
+  }
+  .project-row:hover h3,
+  .writing-row:hover h3 {
+    color: var(--home-accent);
+  }
+  .project-copy p,
+  .writing-copy p {
+    margin-top: 0.5rem;
+    color: var(--home-muted);
+    font-size: 0.9375rem;
+    line-height: 1.75;
+    overflow-wrap: anywhere;
+  }
+  .project-stack,
+  .reading-time {
+    display: block;
+    margin-top: 1rem;
+    overflow-wrap: anywhere;
+  }
+  .entry-arrow {
+    justify-self: end;
+    color: var(--home-muted);
+    line-height: 1.5;
+    transition:
+      transform 250ms ease,
+      color 180ms ease;
+  }
+  a:hover .entry-arrow {
+    transform: translateX(3px);
+    color: var(--home-accent);
+  }
+  .empty-state {
+    padding: 2rem 0;
+    color: var(--home-muted);
+    font-size: 0.9375rem;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    [data-reveal].reveal-pending {
+      opacity: 0;
+      transform: translateY(18px);
+    }
+    [data-reveal] {
+      transition:
+        opacity 600ms ease,
+        transform 600ms ease;
+    }
+  }
+  @media (max-width: 767px) {
+    .intro {
+      grid-template-columns: minmax(0, 1fr);
+      align-content: center;
+      gap: 3rem;
+      padding: 3rem 0 5rem;
+    }
+    .intro-description {
+      font-size: 1rem;
+    }
+    .contributions {
+      display: block;
+      padding: 0;
+    }
+    .content-section {
+      padding: 2rem 0;
+    }
+    .section-heading {
+      gap: 1rem;
+      padding-bottom: 1.25rem;
+    }
+    .project-row,
+    .writing-row {
+      grid-template-columns: minmax(0, 1fr) 1.25rem;
+      gap: 0.5rem 1rem;
+      padding: 1.5rem 0;
+    }
+    .project-number,
+    time {
+      grid-column: 1;
+    }
+    .project-copy,
+    .writing-copy {
+      grid-column: 1;
+    }
+    .entry-arrow {
+      grid-column: 2;
+      grid-row: 2;
+    }
+    h3 {
+      font-size: 1.125rem;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    a,
+    h3,
+    .intro .scroll-down,
+    .scroll-down > span,
+    .entry-arrow {
+      transition: none;
+    }
+    a:hover .entry-arrow,
+    .intro .scroll-down > span {
+      transform: none;
+    }
+  }
+</style>
+
+<script>
+  const contributionScroll = document.getElementById("contribution-scroll");
+  const chart = contributionScroll?.querySelector("img");
+  const showRecentWeeks = () => {
+    if (contributionScroll)
+      contributionScroll.scrollLeft =
+        contributionScroll.scrollWidth - contributionScroll.clientWidth;
+  };
+  if (chart?.complete) showRecentWeeks();
+  else chart?.addEventListener("load", showRecentWeeks, { once: true });
+
+  if (
+    "IntersectionObserver" in window &&
+    !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  ) {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.remove("reveal-pending");
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.08 },
+    );
+    document
+      .querySelectorAll<HTMLElement>("[data-reveal]")
+      .forEach((section) => {
+        if (section.getBoundingClientRect().top >= window.innerHeight) {
+          section.classList.add("reveal-pending");
+          observer.observe(section);
+        }
+      });
+  }
+</script>

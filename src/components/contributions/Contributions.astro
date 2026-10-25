@@ -1,0 +1,619 @@
+---
+import { integrationConfig } from "@config/integrations.mjs";
+import Markdown from "@components/Markdown.astro";
+import {
+  contributionProjects,
+  contributionSearchUrl,
+  formatMergeDate,
+  mergedPullRequests,
+} from "@lib/contributions";
+
+interface Props {
+  compact?: boolean;
+}
+const { compact = false } = Astro.props;
+---
+
+<div
+  class:list={["contributions", compact && "contributions--compact"]}
+  data-contributions={compact ? undefined : true}
+  data-page-size={compact
+    ? undefined
+    : integrationConfig.contributions.pageSize}
+>
+  {
+    !compact && (
+      <div class="repositories">
+        <h3>Contributed repositories</h3>
+        <ul aria-label="Filter by repository">
+          <li>
+            <button
+              type="button"
+              data-repository=""
+              aria-pressed="true"
+              disabled
+            >
+              All repositories <span>{mergedPullRequests.length}</span>
+            </button>
+          </li>
+          {contributionProjects.map((project) => (
+            <li>
+              <button
+                type="button"
+                data-repository={project.repository}
+                aria-pressed="false"
+                disabled
+              >
+                {project.repository}
+                <span aria-label={`${project.count} merged pull requests`}>
+                  {project.count}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )
+  }
+
+  <p
+    class="results-count"
+    data-results
+    role="status"
+    aria-live="polite"
+    aria-atomic="true"
+    tabindex="-1"
+  >
+    {
+      mergedPullRequests.length === 0
+        ? "No contributions yet"
+        : compact
+          ? `Latest ${Math.min(6, mergedPullRequests.length)} merged PRs`
+          : `${mergedPullRequests.length} merged PRs`
+    }
+  </p>
+
+  <ul
+    class="contribution-list"
+    aria-label={compact ? "Recent contributions" : "Merged pull requests"}
+  >
+    {
+      mergedPullRequests.slice(0, compact ? 6 : undefined).map((pr) => (
+        <li
+          class="contribution-entry"
+          data-entry
+          data-repository={pr.repository}
+        >
+          <article>
+            <div class="entry-meta">
+              <a
+                href={`https://github.com/${pr.repository}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {pr.repository}
+              </a>
+              <span>#{pr.number}</span>
+              <span class="merged-state">Merged</span>
+            </div>
+            <h3>
+              <a href={pr.url} target="_blank" rel="noopener noreferrer">
+                {pr.title}
+              </a>
+            </h3>
+            <div class="entry-details">
+              <p class="entry-dates">
+                <span>
+                  Merged{" "}
+                  <time datetime={pr.mergedAt}>
+                    {formatMergeDate(pr.mergedAt)}
+                  </time>
+                </span>
+                {!compact && (
+                  <span>
+                    Opened{" "}
+                    <time datetime={pr.createdAt}>
+                      {formatMergeDate(pr.createdAt)}
+                    </time>
+                  </span>
+                )}
+              </p>
+              {!compact && pr.labels.length > 0 && (
+                <ul class="entry-labels" aria-label="GitHub labels">
+                  {pr.labels.map((label) => (
+                    <li>{label}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            {!compact && (
+              <>
+                <dl class="entry-stats">
+                  <div>
+                    <dt>Files</dt>
+                    <dd>{pr.changedFiles}</dd>
+                  </div>
+                  <div>
+                    <dt>Additions</dt>
+                    <dd class="additions">
+                      +{pr.additions.toLocaleString("en-US")}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Deletions</dt>
+                    <dd>−{pr.deletions.toLocaleString("en-US")}</dd>
+                  </div>
+                  <div>
+                    <dt>Commits</dt>
+                    <dd>{pr.commits}</dd>
+                  </div>
+                  <div>
+                    <dt>Comments</dt>
+                    <dd>{pr.comments}</dd>
+                  </div>
+                  <div>
+                    <dt>Review comments</dt>
+                    <dd>{pr.reviewComments}</dd>
+                  </div>
+                  {pr.mergedBy && (
+                    <div>
+                      <dt>Merged by</dt>
+                      <dd>
+                        <a
+                          href={`https://github.com/${pr.mergedBy}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {pr.mergedBy}
+                        </a>
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+                {pr.body.trim() && (
+                  <details class="entry-description">
+                    <summary>PR description</summary>
+                    <div>
+                      <Markdown content={pr.body} compact />
+                    </div>
+                    <a href={pr.url} target="_blank" rel="noopener noreferrer">
+                      View discussion on GitHub
+                    </a>
+                  </details>
+                )}
+              </>
+            )}
+          </article>
+        </li>
+      ))
+    }
+  </ul>
+
+  {
+    !compact && (
+      <footer class="contributions-footer">
+        {contributionSearchUrl && (
+          <a
+            href={contributionSearchUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            View merged PRs on GitHub
+          </a>
+        )}
+        <nav
+          class="pagination"
+          aria-label="Contribution pages"
+          data-pagination
+          hidden
+        >
+          <button type="button" data-previous disabled>
+            Previous
+          </button>
+          <div class="pagination-pages" data-pages />
+          <button type="button" data-next disabled>
+            Next
+          </button>
+        </nav>
+      </footer>
+    )
+  }
+</div>
+
+<script>
+  for (const root of document.querySelectorAll<HTMLElement>(
+    "[data-contributions]",
+  )) {
+    const status = root.querySelector<HTMLElement>("[data-results]");
+    if (!status) continue;
+    const pageSize = Number(root.dataset.pageSize);
+    const entries = Array.from(
+      root.querySelectorAll<HTMLLIElement>("[data-entry]"),
+    );
+    const repositoryButtons = Array.from(
+      root.querySelectorAll<HTMLButtonElement>("button[data-repository]"),
+    );
+    const repositories = new Set(
+      repositoryButtons.map((button) => button.dataset.repository),
+    );
+    const pagination = root.querySelector<HTMLElement>("[data-pagination]");
+    const pages = root.querySelector<HTMLElement>("[data-pages]");
+    const previous = root.querySelector<HTMLButtonElement>("[data-previous]");
+    const next = root.querySelector<HTMLButtonElement>("[data-next]");
+    let repository = "";
+    let currentPage = 1;
+
+    const readUrl = () => {
+      const params = new URL(window.location.href).searchParams;
+      const requestedRepository = params.get("repository") ?? "";
+      repository = repositories.has(requestedRepository)
+        ? requestedRepository
+        : "";
+      const requestedPage = Number(params.get("page") ?? 1);
+      currentPage =
+        Number.isInteger(requestedPage) && requestedPage > 0
+          ? requestedPage
+          : 1;
+    };
+
+    const update = (historyMode?: "push" | "replace") => {
+      const matching = entries.filter(
+        (entry) => !repository || entry.dataset.repository === repository,
+      );
+      const pageCount = Math.max(1, Math.ceil(matching.length / pageSize));
+      currentPage = Math.min(currentPage, pageCount);
+      const start = (currentPage - 1) * pageSize;
+      const visible = new Set(matching.slice(start, start + pageSize));
+      for (const entry of entries) entry.hidden = !visible.has(entry);
+      for (const button of repositoryButtons) {
+        button.disabled = false;
+        button.setAttribute(
+          "aria-pressed",
+          String(button.dataset.repository === repository),
+        );
+      }
+      const scope = repository ? ` in ${repository}` : "";
+      status.textContent = matching.length
+        ? `Showing ${start + 1}–${start + visible.size} of ${matching.length} PRs${scope}`
+        : "No contributions yet";
+
+      if (pagination && pages && previous && next) {
+        pagination.hidden = pageCount <= 1;
+        previous.disabled = currentPage === 1;
+        previous.dataset.page = String(currentPage - 1);
+        next.disabled = currentPage === pageCount;
+        next.dataset.page = String(currentPage + 1);
+        pages.replaceChildren();
+        const displayedPages = new Set([1, pageCount]);
+        for (
+          let number = Math.max(1, currentPage - 1);
+          number <= Math.min(pageCount, currentPage + 1);
+          number++
+        )
+          displayedPages.add(number);
+        let lastPage = 0;
+        for (const number of [...displayedPages].sort((a, b) => a - b)) {
+          if (lastPage && number - lastPage > 1) {
+            const gap = document.createElement("span");
+            gap.textContent = "…";
+            gap.setAttribute("aria-hidden", "true");
+            pages.append(gap);
+          }
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = String(number);
+          button.dataset.page = String(number);
+          button.setAttribute("aria-label", `Page ${number}`);
+          if (number === currentPage)
+            button.setAttribute("aria-current", "page");
+          pages.append(button);
+          lastPage = number;
+        }
+      }
+      if (historyMode) {
+        const url = new URL(window.location.href);
+        if (repository) url.searchParams.set("repository", repository);
+        else url.searchParams.delete("repository");
+        if (currentPage > 1) url.searchParams.set("page", String(currentPage));
+        else url.searchParams.delete("page");
+        const href = url.pathname + url.search + url.hash;
+        if (historyMode === "replace")
+          window.history.replaceState(null, "", href);
+        else if (
+          href !==
+          window.location.pathname +
+            window.location.search +
+            window.location.hash
+        )
+          window.history.pushState(null, "", href);
+      }
+    };
+
+    root.addEventListener("click", (event) => {
+      if (!(event.target instanceof HTMLElement)) return;
+      const button = event.target.closest<HTMLButtonElement>(
+        "button[data-repository], button[data-page]",
+      );
+      if (!button || button.disabled) return;
+      if (button.dataset.repository !== undefined) {
+        repository = button.dataset.repository;
+        currentPage = 1;
+        update("push");
+      } else {
+        currentPage = Number(button.dataset.page);
+        update("push");
+        status.scrollIntoView({ block: "start" });
+        status.focus({ preventScroll: true });
+      }
+    });
+    window.addEventListener("popstate", () => {
+      readUrl();
+      update();
+    });
+    readUrl();
+    update("replace");
+  }
+</script>
+
+<style>
+  .contributions {
+    color: var(--color-primary);
+  }
+  [hidden] {
+    display: none !important;
+  }
+  .repositories {
+    margin-bottom: 2rem;
+  }
+  .repositories h3 {
+    margin: 0 0 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-secondary);
+  }
+  .repositories ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .repositories button {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+    overflow-wrap: anywhere;
+  }
+  .repositories button:hover,
+  .repositories button[aria-pressed="true"] {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+    background: rgb(var(--color-accent-rgb) / 0.05098);
+    text-decoration: none;
+  }
+  .repositories button span {
+    color: var(--color-secondary);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+  }
+  button {
+    color: var(--color-accent);
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    text-underline-offset: 0.25em;
+  }
+  button:hover {
+    text-decoration: underline;
+  }
+  button {
+    min-height: 2.75rem;
+  }
+  a:focus-visible,
+  button:focus-visible,
+  summary:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 4px;
+  }
+  .results-count {
+    margin: 0 0 0.75rem;
+    color: var(--color-secondary);
+    font-size: 0.8rem;
+  }
+  .contribution-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .contribution-entry {
+    padding: 1.75rem 0;
+    border-top: 1px solid var(--color-border);
+  }
+  .entry-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--color-secondary);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+  }
+  .entry-meta a {
+    color: var(--color-accent);
+    overflow-wrap: anywhere;
+  }
+  .merged-state {
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    background: rgb(var(--color-accent-rgb) / 0.05098);
+    color: var(--color-accent);
+  }
+  .contribution-entry h3 {
+    max-width: 65ch;
+    margin: 0.7rem 0 0.6rem;
+    font-size: 1.15rem;
+    font-weight: 500;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+  .contribution-entry h3 a:hover {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+  .entry-details {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1.5rem;
+  }
+  .entry-dates {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.5rem;
+    margin: 0;
+    color: var(--color-secondary);
+    font-size: 0.8rem;
+  }
+  .entry-labels {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .entry-labels li {
+    padding: 0.2rem 0.6rem;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    color: var(--color-secondary);
+    font-size: 0.75rem;
+    overflow-wrap: anywhere;
+  }
+  .entry-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.5rem;
+    margin: 1.1rem 0 0;
+  }
+  .entry-stats > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: baseline;
+  }
+  .entry-stats dt {
+    color: var(--color-secondary);
+    font-size: 0.75rem;
+  }
+  .entry-stats dd {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    overflow-wrap: anywhere;
+  }
+  .entry-stats a,
+  .additions {
+    color: var(--color-accent);
+  }
+  .entry-description {
+    margin-top: 1.1rem;
+    font-size: 0.85rem;
+  }
+  .entry-description summary {
+    width: fit-content;
+    cursor: pointer;
+    color: var(--color-accent);
+  }
+  .entry-description > div {
+    max-height: 26rem;
+    overflow: auto;
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-surface-muted);
+    overflow-wrap: anywhere;
+    line-height: 1.7;
+  }
+  .entry-description > a {
+    display: inline-block;
+    margin-top: 0.75rem;
+    color: var(--color-accent);
+  }
+  .contributions-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-border);
+  }
+  .contributions-footer > a {
+    color: var(--color-accent);
+    font-size: 0.85rem;
+  }
+  .contributions-footer > a:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.25em;
+  }
+  .pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-left: auto;
+  }
+  .pagination-pages {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+  }
+  .pagination :global(button) {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    color: var(--color-accent);
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+  }
+  .pagination :global(button[aria-current="page"]) {
+    border-color: var(--color-accent);
+    background: rgb(var(--color-accent-rgb) / 0.05098);
+  }
+  .pagination :global(button:disabled) {
+    color: var(--color-secondary);
+    opacity: 0.5;
+    cursor: default;
+  }
+  .pagination :global(button:focus-visible) {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 4px;
+  }
+  .contributions--compact .contribution-entry {
+    padding: 1.1rem 0;
+  }
+  .contributions--compact .contribution-entry h3 {
+    font-size: 1rem;
+  }
+  @media (max-width: 640px) {
+    .entry-stats {
+      gap: 0.6rem 1rem;
+    }
+    .contribution-entry h3 {
+      font-size: 1.05rem;
+    }
+  }
+</style>
