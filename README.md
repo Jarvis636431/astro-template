@@ -35,4 +35,4 @@ Manage this source, configuration, and content with Git normally. The maintainer
 
 ## Publishing
 
-Replace defaults and review links. A code and asset license must still be chosen before distributing a template; the generator does not choose or declare one on the author's behalf.
+Replace defaults and review links. This project is licensed under the [MIT License](LICENSE). Respect the respective licenses of any third-party code or assets you add.

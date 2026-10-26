@@ -1,5 +1,6 @@
 {
   "name": "astro-template",
+  "license": "MIT",
   "type": "module",
   "version": "0.1.0",
   "packageManager": "pnpm@10.14.0",
